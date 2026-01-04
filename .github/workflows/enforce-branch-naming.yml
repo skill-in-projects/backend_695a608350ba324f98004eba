@@ -1,0 +1,46 @@
+name: Enforce Branch Naming Convention
+
+on:
+  push:
+    branches-ignore:
+      - main
+  create:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate-branch-name:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Get branch name
+        id: branch
+        run: |
+          if [ "${{ github.event_name }}" = "create" ]; then
+            BRANCH_NAME="${{ github.event.ref }}"
+          else
+            BRANCH_NAME="${{ github.ref_name }}"
+          fi
+          echo "branch_name=$BRANCH_NAME" >> $$GITHUB_OUTPUT
+          echo "Branch name: $BRANCH_NAME"
+      
+      - name: Validate branch naming pattern
+        run: |
+          BRANCH_NAME="${{ steps.branch.outputs.branch_name }}"
+          PATTERN="([1-9]|1[0-9]|20)-B"
+          
+          if [[ ! "$$BRANCH_NAME" =~ ^$$PATTERN$$ ]]; then
+            echo "❌ Branch name '$$BRANCH_NAME' does not match the required pattern: $$PATTERN"
+            echo "📋 Branch naming convention for Backend repositories:"
+            echo "   - Must match pattern: $$PATTERN"
+            echo "   - Examples: 1-B, 2-B, 20-B"
+            echo "   - Format: [Number 1-20]-[B for Backend, F for Frontend]"
+            exit 1
+          else
+            echo "✅ Branch name '$$BRANCH_NAME' matches the required pattern: $$PATTERN"
+          fi
